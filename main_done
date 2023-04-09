@@ -1,0 +1,171 @@
+from pygame import *
+from random import randint
+import time as tm
+from datetime import datetime
+from math import floor
+
+#Переменные
+FPS = 60
+wn_x,wn_y = 800,600
+start_x,start_y = 15,120
+wn = display.set_mode((wn_x,wn_y))
+display.set_caption("Пинг-Понг")
+
+clock = time.Clock()
+
+
+#Основной класс
+class Player(sprite.Sprite):
+    def __init__(self, player_image, player_x, player_y, player_speed,size):
+        super().__init__()
+        self.image = transform.scale(image.load(player_image), size)
+        self.rect = self.image.get_rect()
+        self.rect.x = player_x
+        self.rect.y = player_y
+        self.speed = player_speed 
+        self.start_sp = player_speed 
+        
+
+    def rand_speed(self):
+        a = randint(1,2)
+        if a == 1:
+            self.speed_x = self.speed 
+        else:
+            self.speed_x = -self.speed 
+        b = randint(1,2)
+        if b == 1:
+            self.speed_y = self.speed 
+        else:
+            self.speed_y = -self.speed
+
+        self.rect.x = 372
+        self.rect.y = 266
+
+    def show_(self):
+
+        wn.blit(self.image, (self.rect.x, self.rect.y))
+
+Bulets = sprite.Group()
+Monsters = sprite.Group()
+
+#Бек
+background = transform.scale(image.load("table.png"),(wn_x+10,wn_y+20))
+
+#НЛО
+Player_left = Player("Platforms.png",10,220,5,(30,150))
+Player_right = Player("Platforms.png",760,220,5,(30,150))
+
+
+#Мяч
+ball = Player("Tennis_Ball.png",372, 266,5,(50,50))
+ball.rand_speed()
+
+#Текст 
+font.init()
+font = font.Font(None,50)
+color = (178, 34, 34)
+score = font.render("bul_now",True,color)
+timerr = font.render("bul_stay",True,color)
+
+bulls_stay = 100
+bulls_stay_start = bulls_stay
+
+start_time = tm.time()
+
+score_left = 0
+score_right = 0
+
+
+GAME = True
+
+
+
+score = 0
+
+while GAME:
+    time_now = round(tm.time() - start_time)
+
+    #Отрисовка
+    wn.blit(background,(-10,-10))
+
+    Player_left.show_()
+    Player_right.show_()
+
+    ball.show_()
+
+    ball.rect.x += ball.speed_x
+    ball.rect.y += ball.speed_y
+
+    if ball.rect.y > wn_y-50:
+        ball.speed_y *= -1
+    if ball.rect.y < 2:
+        ball.speed_y *= -1
+    
+
+    if ball.rect.x > wn_x-50:
+        print("Левый забил")
+        score_left += 1
+        ball.speed = ball.start_sp
+        ball.rand_speed()
+        
+    if ball.rect.x < 2:
+        print("Правый забил")
+        score_right += 1
+        ball.speed = ball.start_sp
+        ball.rand_speed()
+
+
+    #столкновение с платформой
+    if sprite.collide_rect(ball, Player_left):
+        ball.speed_x *= -1
+        ball.rect.x += 2
+    if sprite.collide_rect(ball, Player_right):
+        ball.speed_x *= -1
+        ball.rect.x -= 2
+    
+    #Отрисовка текста
+    score_text = str(score_left)+":"+str(score_right)
+    score = font.render(score_text,True,color)
+    minut = floor(time_now/60)
+    timerr = font.render(str(minut)+":"+str(time_now-minut*60),True,color)
+    
+    wn.blit(score,(374,10))
+    wn.blit(timerr,(374,570))
+
+    #чек времени
+    if minut == 1:
+        if score_left > score_right:
+            winer = "левый"
+        elif score_left < score_right:
+            winer = "правый"
+        elif score_left == score_right:
+            winer = "дружба"
+        with open("log_pong.txt","a") as f:
+            answ = str(tm.ctime()) + "\n"
+            answ += "Победил - " + winer + "\n"
+            answ += "Со счётом: "+ score_text
+            f.write(answ)
+        GAME = False
+
+    key_pressed = key.get_pressed()
+
+    if key_pressed[K_w] and Player_left.rect.y > 5:
+        Player_left.rect.y -= Player_left.speed
+    if key_pressed[K_s] and Player_left.rect.y < wn_x-350:
+        Player_left.rect.y += Player_left.speed
+    
+    if key_pressed[K_UP] and Player_right.rect.y > 5:
+        Player_right.rect.y -= Player_right.speed
+    if key_pressed[K_DOWN] and Player_right.rect.y < wn_x-350:
+        Player_right.rect.y += Player_right.speed
+
+    #Отрисовка пули
+    for events in event.get():
+        if events.type == QUIT:
+            GAME = False
+        """if events.type == KEYDOWN:
+            if events.key == K_SPACE and bulls_stay > 0:"""
+            
+
+    clock.tick(FPS)
+    display.update()
